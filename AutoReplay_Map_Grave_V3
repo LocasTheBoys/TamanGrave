@@ -1,27 +1,33 @@
 -- ==========================================================
--- AUTO REPLAY MAP GRAVE V4
--- Hasil revisi dari AutoReplay_Map_Grave_V3
+-- AUTO REPLAY MAP GRAVE V5  (file: AutoReplay_Map_Grave_V3)
+-- Hasil revisi dari AutoReplay_Map_Grave_V2 (internal "V4")
+-- Ada Fitur matikan auto pilih map + bisa playagain saja
 -- ==========================================================
--- AutoReplay_Map_Grave_V1/V2/V3 TIDAK diubah/dirusak. File
--- ini adalah file BARU.
+-- AutoReplay_Map_Grave_V1/V2 TIDAK diubah/dirusak. File ini
+-- adalah file BARU dan ditaruh di branch main langsung.
 --
--- PERUBAHAN DARI V3 -> V4:
---   [HARD-KILL] Tombol Close (X) sekarang BENAR-BENAR mati total.
---         - Cancel in-flight Humanoid:MoveTo() -> karakter
---           langsung freeze di posisi sekarang, gak ada lagi
---           "sisa langkah ~8 detik" dari engine Roblox.
---         - Disconnect listener UserInputService (service-level
---           connection yang gak auto-clean saat ScreenGui destroy).
---         - Cleanup terpusat di fungsi cleanupAndDestroy().
+-- PERUBAHAN DARI V2(V4) -> V3(V5):
+--   [SPLIT] AutoStart & Playagain DIPISAH jadi 2 config independen
+--           supaya bisa dikontrol terpisah:
+--             - AutoStart -> ngurus VOTE difficulty / pilih gamemode
+--                            (klik tombol dif_xxx + RestartGame).
+--             - Playagain -> ngurus KLIK tombol "Play Again" doang
+--                            (waktu GameEnd UI muncul).
+--           Kombinasi:
+--             AutoStart=true , Playagain=true  -> klik PlayAgain + pilih gamemode (full auto)
+--             AutoStart=false, Playagain=true  -> HANYA klik PlayAgain, gamemode pilih manual
+--             AutoStart=true , Playagain=false -> HANYA pilih gamemode (PlayAgain manual)
+--             AutoStart=false, Playagain=false -> dua-duanya manual (alias OFF)
+--   [GUI]   Tambah toggle "PlayAgain: ON/OFF" di panel (terpisah
+--           dari toggle "AutoStart").
 --
--- (Diwariskan dari V3, tetap berlaku di V4)
---   [FIX] Counter "Game #N" pakai logika match-detection dari
---         LowGrafik_V9 -> increment SEKALI per match-end. Bug
---         "ngehitung 2x setelah reset" hilang.
---   [FIX] Random:in N konsisten karena counter akurat.
---   [GUI] DefaultStateMinimize: state default GUI saat eksekusi
---         pertama (true = badge kecil / false = panel lebar).
---   [GUI] Posisi default panel: kanan agak ke tengah (gap 80px).
+-- (Diwariskan dari V2, tetap berlaku di V3)
+--   [HARD-KILL] Tombol Close (X) BENAR-BENAR mati total
+--               (cancel MoveTo + disconnect UIS + destroy GUI).
+--   [FIX]   Counter "Game #N" pakai match-detection (LowGrafik_V9)
+--           -> increment SEKALI per match-end.
+--   [FIX]   Random:in N konsisten karena counter akurat.
+--   [GUI]   DefaultStateMinimize, RightInset, PanelWidth/Height.
 -- ==========================================================
 
 
@@ -75,18 +81,23 @@ local AutoJalanConfig = {
 
 -- ── [KATEGORI 4] AUTO REPLAY ───────────────────────────────
 -- Auto klik Play Again + Vote difficulty + RestartGame.
+-- CATATAN PENTING (V3): AutoStart & Playagain SEKARANG TERPISAH.
+--   - AutoStart  -> hanya ngurus VOTE difficulty/gamemode.
+--   - Playagain  -> hanya ngurus KLIK tombol "Play Again".
+-- Loop replay aktif kalau MINIMAL salah satunya = true.
 local ReplayConfig = {
 
-    AutoStart       = true,            -- [REPLAY] guna: status Auto Replay saat di-load.                                                       | nilai: true = langsung ON / false = harus toggle manual via GUI.
-    TargetDif       = "dif_impossible",-- [REPLAY] guna: difficulty default yang di-vote saat ronde NORMAL (bukan ronde random).                | nilai: dif_easy / dif_normal / dif_hard / dif_insane / dif_impossible / dif_apocalypse. Map Grave biasanya "dif_impossible".
+    AutoStart       = false,            -- [REPLAY] guna: AUTO PILIH GAMEMODE/DIFFICULTY waktu UI DifficultyVote muncul. | nilai: true = otomatis vote dif (TargetDif / random pool) lalu RestartGame / false = TIDAK auto-vote, gamemode dipilih MANUAL.
+    Playagain       = true,            -- [REPLAY] guna: AUTO KLIK tombol "Play Again" waktu UI GameEnd muncul.          | nilai: true = otomatis klik Play Again / false = TIDAK auto-klik (kamu harus klik manual). PISAH dari AutoStart -> bisa kombinasi bebas.
+    TargetDif       = "dif_impossible",-- [REPLAY] guna: difficulty default yang di-vote saat ronde NORMAL (bukan ronde random). Hanya berlaku kalau AutoStart=true. | nilai: dif_easy / dif_normal / dif_hard / dif_insane / dif_impossible / dif_apocalypse. Map Grave biasanya "dif_impossible".
 
     LoopInterval    = 0.4,             -- [REPLAY] guna: jeda antar iterasi loop Replay.                                       | nilai: detik. Kecil = responsif tapi berat. 0.3-0.6 wajar.
     CooldownAgain   = 1.5,             -- [REPLAY] guna: jeda minimum antar percobaan klik tombol "Play Again".                | nilai: detik. Cegah spam-click.
     CooldownVote    = 4,               -- [REPLAY] guna: jeda minimum antar fire vote+RestartGame.                             | nilai: detik. Cegah double-fire saat UI kedip.
     ClickVerifyT    = 0.8,             -- [REPLAY] guna: setelah klik Play Again, tunggu segini lalu cek apakah GameEnd hilang. | nilai: detik.
 
-    -- ── Randomness mode ────────────────────────────────────
-    RandomnessEnabled  = true,         -- [RANDOM] guna: aktifkan fitur random difficulty per N ronde.            | nilai: true = aktif / false = TargetDif dipakai semua ronde.
+    -- ── Randomness mode (hanya berlaku kalau AutoStart=true) ──
+    RandomnessEnabled  = false,         -- [RANDOM] guna: aktifkan fitur random difficulty per N ronde.            | nilai: true = aktif / false = TargetDif dipakai semua ronde. (HANYA jalan kalau AutoStart=true)
     RandomnessInterval = 5,            -- [RANDOM] guna: tiap kelipatan N ronde, difficulty dipilih random.        | nilai: integer >= 1. Contoh 5 = ronde ke-5, 10, 15,... random. Set 1 = setiap ronde random.
     RandomnessPool     = {             -- [RANDOM] guna: list difficulty yang BOLEH dipakai saat ronde random.    | nilai: array string. Edit sesuai selera.
         "dif_easy",                    --   easy        | mode termudah
@@ -160,7 +171,7 @@ pcall(function() VirtualInputManager = game:GetService("VirtualInputManager") en
 math.randomseed(tick() % 1 * 1e7 + os.time())
 
 local function dprint(...)
-    if DEBUG_PRINT then print("[GraveV4]", ...) end
+    if DEBUG_PRINT then print("[GraveV5]", ...) end
 end
 
 
@@ -188,7 +199,8 @@ local lastManualClickAt    = 0
 local lastSeenWaveControls = nil
 
 -- Replay state
-local replayRunning  = ReplayConfig.AutoStart
+-- V3: master loop ON kalau MINIMAL salah satu dari {AutoStart, Playagain} = true.
+local replayRunning  = (ReplayConfig.AutoStart or ReplayConfig.Playagain) and true or false
 local lastAgainAt    = 0
 local lastVoteAt     = 0
 local clickAttempt   = 0
@@ -594,12 +606,12 @@ end
 -- ╔══════════════════════════════════════════════════════════╗
 -- ║         GUI (pattern AutoReplayV5/SkipV7 yang work)       ║
 -- ╚══════════════════════════════════════════════════════════╝
-if CoreGui:FindFirstChild("AutoReplayMapGraveV4") then
-    CoreGui.AutoReplayMapGraveV4:Destroy()
+if CoreGui:FindFirstChild("AutoReplayMapGraveV5") then
+    CoreGui.AutoReplayMapGraveV5:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "AutoReplayMapGraveV4"
+ScreenGui.Name = "AutoReplayMapGraveV5"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = CoreGui
@@ -636,7 +648,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -60, 1, 0)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "Replay Grave V4 (+ Skip & Walk)"
+Title.Text = "Replay Grave V5 (+ Skip & Walk)"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Font = Enum.Font.GothamBold
@@ -776,17 +788,31 @@ Instance.new("UICorner", AutoJalanBtn).CornerRadius = UDim.new(0, 6)
 -- ── SECTION AUTO REPLAY ─────────────────────────────────
 makeSection("[D] AUTO REPLAY (Map Grave)", 168)
 
-local ReplayToggleBtn = Instance.new("TextButton")
-ReplayToggleBtn.Size = UDim2.new(0.9, 0, 0, 28)
-ReplayToggleBtn.Position = UDim2.new(0.05, 0, 0, 188)
-ReplayToggleBtn.BackgroundColor3 = replayRunning and Color3.fromRGB(80, 200, 80) or Color3.fromRGB(200, 80, 80)
-ReplayToggleBtn.Text = "Replay: " .. (replayRunning and "ON" or "OFF")
-ReplayToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ReplayToggleBtn.Font = Enum.Font.GothamBold
-ReplayToggleBtn.TextSize = 12
-ReplayToggleBtn.AutoButtonColor = false
-ReplayToggleBtn.Parent = ContentFrame
-Instance.new("UICorner", ReplayToggleBtn).CornerRadius = UDim.new(0, 6)
+-- V3: 2 toggle PISAH (AutoStart + PlayAgain), masing-masing setengah lebar.
+-- replayRunning = (AutoStart OR PlayAgain). Kalau dua-duanya OFF -> loop pause.
+local AutoStartBtn = Instance.new("TextButton")
+AutoStartBtn.Size = UDim2.new(0.43, 0, 0, 28)
+AutoStartBtn.Position = UDim2.new(0.05, 0, 0, 188)
+AutoStartBtn.BackgroundColor3 = ReplayConfig.AutoStart and Color3.fromRGB(80, 200, 80) or Color3.fromRGB(200, 80, 80)
+AutoStartBtn.Text = "AutoStart: " .. (ReplayConfig.AutoStart and "ON" or "OFF")
+AutoStartBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoStartBtn.Font = Enum.Font.GothamBold
+AutoStartBtn.TextSize = 11
+AutoStartBtn.AutoButtonColor = false
+AutoStartBtn.Parent = ContentFrame
+Instance.new("UICorner", AutoStartBtn).CornerRadius = UDim.new(0, 6)
+
+local PlayAgainBtn = Instance.new("TextButton")
+PlayAgainBtn.Size = UDim2.new(0.43, 0, 0, 28)
+PlayAgainBtn.Position = UDim2.new(0.52, 0, 0, 188)
+PlayAgainBtn.BackgroundColor3 = ReplayConfig.Playagain and Color3.fromRGB(80, 200, 80) or Color3.fromRGB(200, 80, 80)
+PlayAgainBtn.Text = "PlayAgain: " .. (ReplayConfig.Playagain and "ON" or "OFF")
+PlayAgainBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+PlayAgainBtn.Font = Enum.Font.GothamBold
+PlayAgainBtn.TextSize = 11
+PlayAgainBtn.AutoButtonColor = false
+PlayAgainBtn.Parent = ContentFrame
+Instance.new("UICorner", PlayAgainBtn).CornerRadius = UDim.new(0, 6)
 
 local DifBtn = Instance.new("TextButton")
 DifBtn.Size = UDim2.new(0.9, 0, 0, 24)
@@ -1090,12 +1116,34 @@ AutoJalanBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Replay toggle
-ReplayToggleBtn.MouseButton1Click:Connect(function()
-    replayRunning = not replayRunning
-    ReplayToggleBtn.BackgroundColor3 = replayRunning and Color3.fromRGB(80, 200, 80) or Color3.fromRGB(200, 80, 80)
-    ReplayToggleBtn.Text = "Replay: " .. (replayRunning and "ON" or "OFF")
-    setReplayStatus(replayRunning and "Running..." or "Paused")
+-- Replay toggle (V3): pisah jadi 2 -> AutoStart & PlayAgain.
+-- replayRunning auto-derived = (AutoStart OR PlayAgain).
+local function syncReplayRunning()
+    replayRunning = (ReplayConfig.AutoStart or ReplayConfig.Playagain) and true or false
+    if not replayRunning then
+        setReplayStatus("Paused (AutoStart=OFF & PlayAgain=OFF)")
+    else
+        local mode = ""
+        if ReplayConfig.AutoStart and ReplayConfig.Playagain then mode = "FULL (Vote+PlayAgain)"
+        elseif ReplayConfig.AutoStart                       then mode = "VOTE only"
+        elseif ReplayConfig.Playagain                       then mode = "PLAY AGAIN only"
+        end
+        setReplayStatus("Running... " .. mode)
+    end
+end
+
+AutoStartBtn.MouseButton1Click:Connect(function()
+    ReplayConfig.AutoStart = not ReplayConfig.AutoStart
+    AutoStartBtn.BackgroundColor3 = ReplayConfig.AutoStart and Color3.fromRGB(80, 200, 80) or Color3.fromRGB(200, 80, 80)
+    AutoStartBtn.Text = "AutoStart: " .. (ReplayConfig.AutoStart and "ON" or "OFF")
+    syncReplayRunning()
+end)
+
+PlayAgainBtn.MouseButton1Click:Connect(function()
+    ReplayConfig.Playagain = not ReplayConfig.Playagain
+    PlayAgainBtn.BackgroundColor3 = ReplayConfig.Playagain and Color3.fromRGB(80, 200, 80) or Color3.fromRGB(200, 80, 80)
+    PlayAgainBtn.Text = "PlayAgain: " .. (ReplayConfig.Playagain and "ON" or "OFF")
+    syncReplayRunning()
 end)
 
 -- Difficulty cycle
@@ -1314,9 +1362,16 @@ task.spawn(function()
 
             -- ========================================
             -- PRIORITAS 1: GameEnd / Play Again
+            -- (V3: hanya jalan kalau ReplayConfig.Playagain = true)
             -- ========================================
             local againBtn, gameEnd = getAgainButton()
             if gameEnd and gameEnd.Visible == true then
+                if not ReplayConfig.Playagain then
+                    -- Playagain dimatikan -> jangan klik tombol Again,
+                    -- tapi loop tetap lanjut ke priority lain.
+                    setReplayStatus("GameEnd visible, tapi Playagain=OFF -> klik manual.")
+                    return
+                end
                 if (now - lastAgainAt) < ReplayConfig.CooldownAgain then return end
                 if not againBtn then
                     setReplayStatus("GameEnd visible tapi tombol Again belum ready...")
@@ -1345,9 +1400,16 @@ task.spawn(function()
 
             -- ========================================
             -- PRIORITAS 2: DifficultyVote
+            -- (V3: hanya jalan kalau ReplayConfig.AutoStart = true)
             -- ========================================
             local _, difVote = getDifficultyButtonByName(ReplayConfig.TargetDif)
             if difVote and difVote.Visible == true then
+                if not ReplayConfig.AutoStart then
+                    -- AutoStart dimatikan -> jangan auto-vote gamemode,
+                    -- biar player pilih sendiri.
+                    setReplayStatus("DifficultyVote muncul, tapi AutoStart=OFF -> pilih manual.")
+                    return
+                end
                 if (now - lastVoteAt) < ReplayConfig.CooldownVote then return end
 
                 local chosenDif, isRandom = decideNextDif()
@@ -1485,12 +1547,14 @@ end)
 
 
 print(string.format(
-    "[GraveV4] Loaded. Skip(AS=%s,MS=%s) | Speed=%dx | Jalan=%s | Replay=%s,Dif=%s,Random=%s | Minimize=%s | HardKillOnClose=YES",
+    "[GraveV5] Loaded. Skip(AS=%s,MS=%s) | Speed=%dx | Jalan=%s | Replay=%s,AutoStart=%s,PlayAgain=%s,Dif=%s,Random=%s | Minimize=%s | HardKillOnClose=YES",
     tostring(Config.AutoSkip),
     tostring(Config.ManualSkip),
     SpeedConfig.GameSpeed,
     tostring(autoJalanState.enabled),
     tostring(replayRunning),
+    tostring(ReplayConfig.AutoStart),
+    tostring(ReplayConfig.Playagain),
     ReplayConfig.TargetDif,
     tostring(ReplayConfig.RandomnessEnabled),
     tostring(GuiConfig.DefaultStateMinimize)
