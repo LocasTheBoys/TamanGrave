@@ -34,9 +34,9 @@ local ROTATION_MODE = "smooth"              -- [USER EDIT/E-ROT]      guna: mode
 local DefaultStateMinimize = true           -- [USER EDIT/G-GUI]      guna: state GUI saat eksekusi pertama.
 
 -- [H] AUTO SELL (V8 OPTIMIZED) -------------------------------------------
-local AUTO_SELL_ENABLED        = false      -- [USER EDIT/H-SELL] guna: master switch fitur auto sell.
+local AUTO_SELL_ENABLED        = true      -- [USER EDIT/H-SELL] guna: master switch fitur auto sell.
 local SELL_ALL_AT_WAVE         = 0          -- [USER EDIT/H-SELL] guna: wave dimana SEMUA unit di-sell. 0 = matikan.
-local SELL_TARGET_AT_WAVE      = 9          -- [USER EDIT/H-SELL] guna: wave dimana unit target (TARGET_UNIT) di-sell. 0 = matikan.
+local SELL_TARGET_AT_WAVE      = 20          -- [USER EDIT/H-SELL] guna: wave dimana unit target (TARGET_UNIT) di-sell. 0 = matikan.
 local SELL_INITIAL_DELAY_MIN   = 1.5        -- [USER EDIT/H-SELL] guna: Jeda acak (min) sblm script bereaksi saat wave tercapai (detik)
 local SELL_INITIAL_DELAY_MAX   = 4.5        -- [USER EDIT/H-SELL] guna: Jeda acak (max) sblm script bereaksi (detik)
 local SELL_DELAY_MIN           = 0.3        -- [USER EDIT/H-SELL] guna: Jeda acak (min) antar penjualan per unit (detik)
