@@ -30,7 +30,7 @@ local AutoJalanConfig = {
     MoveTimeout  = 30,                  
     ArriveDist   = 5,                   
 
-    WaypointDelay = 0.5,                
+    WaypointDelay = 3.5,                
     LapDelay      = 1.0,                
     DelayJitter   = 0,                  
 
