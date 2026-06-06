@@ -31,7 +31,7 @@ local scriptsByPlaceId = {
         --"https://raw.githubusercontent.com/LocasTheBoys/TamanGrave/refs/heads/main/AutoUpgradeV1",--upgrade
         "https://raw.githubusercontent.com/LocasTheBoys/TamanGrave/refs/heads/main/PlaceNewV1",--place unit
         "https://raw.githubusercontent.com/LocasTheBoys/TamanGrave/refs/heads/main/PlaceNewRaffV2",--place unit raf
-        "https://raw.githubusercontent.com/LocasTheBoys/TamanGrave/refs/heads/main/AutoReplay_Map_Grave_V5",-- replay, jalan, speed, skip
+        "https://raw.githubusercontent.com/LocasTheBoys/TamanGrave/refs/heads/main/AutoReplay_Map_Grave_V6",-- replay, jalan, speed, skip
         "https://raw.githubusercontent.com/LocasTheBoys/TamanGrave/refs/heads/main/LowGrafik_V12",-- low
         "https://raw.githubusercontent.com/LocasTheBoys/TamanGrave/refs/heads/main/ANTI_AFK",
         "https://raw.githubusercontent.com/LocasTheBoys/TamanGrave/refs/heads/main/AntiDC_V1"
